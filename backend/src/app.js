@@ -10,17 +10,23 @@ import cors from "cors";
 
 const app = express();
 
-
-
-app.use(express.json());
-app.use(cookieParser());
-
+// CORS configuration
 app.use(
   cors({
     origin: process.env.ALLOWED_ORIGINS || "http://localhost:5173",
     credentials: true,
   })
 );
+
+// Webhook route MUST be registered before express.json() middleware
+// because Stripe requires raw body for signature verification
+app.use("/api/orders/webhook", orderRoutes);
+
+// Body parsing middleware
+app.use(express.json());
+app.use(cookieParser());
+
+// Other routes
 app.use("/api/users", userRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
