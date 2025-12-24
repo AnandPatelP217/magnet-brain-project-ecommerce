@@ -18,10 +18,10 @@ app.post('/api/orders/webhook', express.raw({ type: 'application/json' }), (req,
 
 app.use(express.json());
 app.use(cookieParser());
-const allowedOrigins = ["http://localhost:5174", "http://localhost:5173"];
+
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: process.env.ALLOWED_ORIGINS,
     credentials: true,
   })
 );

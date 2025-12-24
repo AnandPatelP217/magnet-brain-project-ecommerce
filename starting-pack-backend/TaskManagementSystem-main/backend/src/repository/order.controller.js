@@ -16,17 +16,17 @@ export class OrderRepository {
   }
 
   /**
-   * Find order by Stripe Payment Intent ID
+   * Find order by Razorpay Order ID
    */
-  async findByPaymentIntentId(paymentIntentId) {
-    return await Order.findOne({ stripePaymentIntentId: paymentIntentId });
+  async findByRazorpayOrderId(razorpayOrderId) {
+    return await Order.findOne({ razorpayOrderId });
   }
 
   /**
-   * Find order by Stripe Session ID
+   * Find order by Razorpay Payment ID
    */
-  async findBySessionId(sessionId) {
-    return await Order.findOne({ stripeSessionId: sessionId });
+  async findByRazorpayPaymentId(razorpayPaymentId) {
+    return await Order.findOne({ razorpayPaymentId });
   }
 
   /**
@@ -64,11 +64,11 @@ export class OrderRepository {
   }
 
   /**
-   * Update order by Payment Intent ID
+   * Update order by Razorpay Order ID
    */
-  async updateByPaymentIntentId(paymentIntentId, updateData) {
+  async updateByRazorpayOrderId(razorpayOrderId, updateData) {
     return await Order.findOneAndUpdate(
-      { stripePaymentIntentId: paymentIntentId },
+      { razorpayOrderId },
       updateData,
       {
         new: true,
@@ -78,11 +78,11 @@ export class OrderRepository {
   }
 
   /**
-   * Update order by Session ID
+   * Update order by Razorpay Payment ID
    */
-  async updateBySessionId(sessionId, updateData) {
+  async updateByRazorpayPaymentId(razorpayPaymentId, updateData) {
     return await Order.findOneAndUpdate(
-      { stripeSessionId: sessionId },
+      { razorpayPaymentId },
       updateData,
       {
         new: true,
@@ -99,10 +99,10 @@ export class OrderRepository {
   }
 
   /**
-   * Check if order exists by payment intent ID
+   * Check if order exists by Razorpay order ID
    */
-  async existsByPaymentIntentId(paymentIntentId) {
-    const order = await Order.findOne({ stripePaymentIntentId: paymentIntentId });
+  async existsByRazorpayOrderId(razorpayOrderId) {
+    const order = await Order.findOne({ razorpayOrderId });
     return !!order;
   }
 }

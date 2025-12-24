@@ -1,5 +1,5 @@
 import { OrderRepository } from '../repository/order.controller.js';
-import AppError from '../utils/AppError.js';
+import { AppError } from '../utils/AppError.js';
 
 const orderRepository = new OrderRepository();
 
@@ -37,39 +37,39 @@ class OrderService {
     }
 
     /**
-     * Get order by Stripe Payment Intent ID
+     * Get order by Razorpay Order ID
      */
-    async getOrderByPaymentIntentId(paymentIntentId) {
+    async getOrderByRazorpayOrderId(razorpayOrderId) {
         try {
-            const order = await orderRepository.findByPaymentIntentId(paymentIntentId);
+            const order = await orderRepository.findByRazorpayOrderId(razorpayOrderId);
             
             if (!order) {
-                throw new AppError('Order not found for this payment intent', 404);
+                throw new AppError('Order not found for this Razorpay order', 404);
             }
             
             return order;
         } catch (error) {
             if (error instanceof AppError) throw error;
-            console.error('Error fetching order by payment intent:', error);
+            console.error('Error fetching order by Razorpay order ID:', error);
             throw new AppError(`Failed to fetch order: ${error.message}`, 500);
         }
     }
 
     /**
-     * Get order by Stripe Session ID
+     * Get order by Razorpay Payment ID
      */
-    async getOrderBySessionId(sessionId) {
+    async getOrderByRazorpayPaymentId(razorpayPaymentId) {
         try {
-            const order = await orderRepository.findBySessionId(sessionId);
+            const order = await orderRepository.findByRazorpayPaymentId(razorpayPaymentId);
             
             if (!order) {
-                throw new AppError('Order not found for this session', 404);
+                throw new AppError('Order not found for this Razorpay payment', 404);
             }
             
             return order;
         } catch (error) {
             if (error instanceof AppError) throw error;
-            console.error('Error fetching order by session ID:', error);
+            console.error('Error fetching order by Razorpay payment ID:', error);
             throw new AppError(`Failed to fetch order: ${error.message}`, 500);
         }
     }
@@ -111,17 +111,17 @@ class OrderService {
     }
 
     /**
-     * Update order by payment intent ID
+     * Update order by Razorpay order ID
      */
-    async updateOrderByPaymentIntent(paymentIntentId, updateData) {
+    async updateOrderByRazorpayOrderId(razorpayOrderId, updateData) {
         try {
-            const order = await orderRepository.updateByPaymentIntentId(
-                paymentIntentId,
+            const order = await orderRepository.updateByRazorpayOrderId(
+                razorpayOrderId,
                 updateData
             );
             
             if (!order) {
-                throw new AppError('Order not found for this payment intent', 404);
+                throw new AppError('Order not found for this Razorpay order', 404);
             }
             
             return order;
@@ -133,17 +133,17 @@ class OrderService {
     }
 
     /**
-     * Update order by session ID
+     * Update order by Razorpay payment ID
      */
-    async updateOrderBySessionId(sessionId, updateData) {
+    async updateOrderByRazorpayPaymentId(razorpayPaymentId, updateData) {
         try {
-            const order = await orderRepository.updateBySessionId(
-                sessionId,
+            const order = await orderRepository.updateByRazorpayPaymentId(
+                razorpayPaymentId,
                 updateData
             );
             
             if (!order) {
-                throw new AppError('Order not found for this session', 404);
+                throw new AppError('Order not found for this Razorpay payment', 404);
             }
             
             return order;

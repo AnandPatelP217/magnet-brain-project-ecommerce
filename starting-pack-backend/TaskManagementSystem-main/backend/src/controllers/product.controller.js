@@ -1,5 +1,5 @@
 import { sendResponse } from '../utils/sendResponse.js';
-import { StatusCodes } from '../constants/statusCodes.js';
+import { STATUS } from '../constants/statusCodes.js';
 import { mockProducts } from '../data/mockProducts.js';
 
 /**
