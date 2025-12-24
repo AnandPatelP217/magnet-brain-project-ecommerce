@@ -88,10 +88,10 @@ function Checkout() {
       // If payment is successful without redirect
       if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
         clearCart()
-        navigate(`/success?payment_intent=${result.paymentIntent.id}`)
+        navigate(`/success?payment_intent=${result.paymentIntent.id}&redirect_status=succeeded`)
       } else if (result.paymentIntent && result.paymentIntent.status === 'processing') {
         clearCart()
-        navigate(`/success?payment_intent=${result.paymentIntent.id}`)
+        navigate(`/success?payment_intent=${result.paymentIntent.id}&redirect_status=processing`)
       } else if (result.error) {
         setPaymentError(result.error.message)
       }

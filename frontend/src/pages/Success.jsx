@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { getOrderByPaymentIntent } from '../services/orderService'
+import { verifyPayment, getOrderByPaymentIntent } from '../services/orderService'
 import { Loading, ErrorMessage } from '../components'
 import { formatAmount, formatDate } from '../utils'
 
@@ -10,8 +10,10 @@ function Success() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [pollingCount, setPollingCount] = useState(0)
+  const [isVerified, setIsVerified] = useState(false)
   
   const paymentIntentId = searchParams.get('payment_intent')
+  const redirectStatus = searchParams.get('redirect_status')
 
   useEffect(() => {
     if (!paymentIntentId) {
@@ -20,9 +22,24 @@ function Success() {
       return
     }
 
-    // Fetch order details and poll for webhook updates
-    const fetchOrderStatus = async () => {
+    // Verify payment and fetch order details
+    const verifyAndFetchOrder = async () => {
       try {
+        // If redirect_status is 'succeeded', verify the payment with backend
+        if (redirectStatus === 'succeeded' && !isVerified) {
+          try {
+            const verifyResult = await verifyPayment({ payment_intent_id: paymentIntentId })
+            setOrder(verifyResult.data.order)
+            setIsVerified(true)
+            setLoading(false)
+            return
+          } catch (verifyErr) {
+            console.warn('Verification failed, falling back to status check:', verifyErr)
+            // Fall through to status check if verification fails
+          }
+        }
+
+        // Fetch order details and poll for webhook updates
         const orderData = await getOrderByPaymentIntent(paymentIntentId)
         setOrder(orderData.data)
         setLoading(false)
@@ -39,8 +56,8 @@ function Success() {
       }
     }
 
-    fetchOrderStatus()
-  }, [paymentIntentId, pollingCount])
+    verifyAndFetchOrder()
+  }, [paymentIntentId, redirectStatus, pollingCount, isVerified])
 
   const getPaymentStatusDisplay = (status) => {
     const statusMap = {
@@ -66,7 +83,14 @@ function Success() {
   }
 
   if (loading) {
-    return <Loading message="Verifying your payment..." />
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <Loading message="Verifying payment..." />
+        {redirectStatus === 'succeeded' && (
+          <p className="text-sm text-green-600 mt-4">✅ Payment successful! Confirming your order...</p>
+        )}
+      </div>
+    )
   }
 
   if (error) {

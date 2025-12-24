@@ -43,9 +43,9 @@ export const getOrderByPaymentIntent = async (paymentIntentId) => {
   }
 }
 
-export const confirmPayment = async (paymentData) => {
+export const verifyPayment = async (paymentData) => {
   try {
-    const response = await api.post('/orders/confirm-payment', paymentData)
+    const response = await api.post('/orders/verify', paymentData)
     return response.data
   } catch (error) {
     throw error
