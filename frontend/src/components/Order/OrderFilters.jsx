@@ -13,6 +13,7 @@ function OrderFilters({ filters, onFilterChange }) {
             <option value="">All</option>
             <option value="pending">Pending</option>
             <option value="created">Created</option>
+            <option value="authorized">Authorized</option>
             <option value="captured">Captured</option>
             <option value="failed">Failed</option>
             <option value="cancelled">Cancelled</option>
@@ -27,7 +28,7 @@ function OrderFilters({ filters, onFilterChange }) {
             className="w-full border p-2 rounded"
           >
             <option value="">All</option>
-            <option value="pending">Pending</option>
+            <option value="created">Created</option>
             <option value="processing">Processing</option>
             <option value="shipped">Shipped</option>
             <option value="delivered">Delivered</option>

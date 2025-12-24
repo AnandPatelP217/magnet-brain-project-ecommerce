@@ -8,10 +8,11 @@ function Checkout() {
   const [email, setEmail] = useState('')
   const [stripe, setStripe] = useState(null)
   const [elements, setElements] = useState(null)
+  const [paymentError, setPaymentError] = useState(null)
   const navigate = useNavigate()
   
   const { cart, getCartTotal, clearCart } = useCart()
-  const { loading, error, clientSecret, publishableKey, initiateCheckout, processPayment } = useCheckout()
+  const { loading, error, clientSecret, publishableKey, paymentIntentId, initiateCheckout } = useCheckout()
   
   const total = getCartTotal()
 
@@ -65,15 +66,38 @@ function Checkout() {
 
   const handlePayment = async (e) => {
     e.preventDefault()
+    setPaymentError(null)
 
     if (!stripe || !elements) return
 
     try {
-      await processPayment(stripe, elements)
-      clearCart()
-      navigate('/success')
+      const { error: submitError } = await elements.submit()
+      if (submitError) {
+        setPaymentError(submitError.message)
+        return
+      }
+
+      const result = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/success`
+        },
+        redirect: 'if_required'
+      })
+
+      // If payment is successful without redirect
+      if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+        clearCart()
+        navigate(`/success?payment_intent=${result.paymentIntent.id}`)
+      } else if (result.paymentIntent && result.paymentIntent.status === 'processing') {
+        clearCart()
+        navigate(`/success?payment_intent=${result.paymentIntent.id}`)
+      } else if (result.error) {
+        setPaymentError(result.error.message)
+      }
     } catch (err) {
-      // Error handled by hook
+      setPaymentError(err.message || 'Payment failed')
+      console.error('Payment error:', err)
     }
   }
 
@@ -141,7 +165,7 @@ function Checkout() {
           <h2 className="font-semibold mb-4">Payment Details</h2>
           <div id="payment-element" className="mb-4"></div>
 
-          {error && <ErrorMessage message={error} />}
+          {(error || paymentError) && <ErrorMessage message={error || paymentError} />}
 
           <button
             type="submit"
@@ -150,6 +174,10 @@ function Checkout() {
           >
             {loading ? 'Processing...' : `Pay $${total.toFixed(2)}`}
           </button>
+          
+          <p className="text-xs text-gray-500 mt-3 text-center">
+            💡 Payment status will be updated automatically via Stripe webhooks
+          </p>
         </form>
       )}
     </div>
