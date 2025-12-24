@@ -5,6 +5,7 @@ import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
 import Success from './pages/Success'
 import Failed from './pages/Failed'
+import Transactions from './pages/Transactions'
 
 function App() {
   const [cart, setCart] = useState([])
@@ -46,14 +47,19 @@ function App() {
           <Link to="/" className="text-2xl font-bold text-blue-600">
             E-commerce-Magnet-brains
           </Link>
-          <Link to="/cart" className="relative">
-            <span className="text-2xl">Card</span>
-            {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {cartCount}
-              </span>
-            )}
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link to="/transactions" className="text-gray-700 hover:text-blue-600 font-medium">
+              Transactions
+            </Link>
+            <Link to="/cart" className="relative">
+              <span className="text-2xl">Card</span>
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -74,6 +80,7 @@ function App() {
           <Route path="/checkout" element={<Checkout cart={cart} />} />
           <Route path="/success" element={<Success />} />
           <Route path="/failed" element={<Failed />} />
+          <Route path="/transactions" element={<Transactions />} />
         </Routes>
       </main>
     </div>
