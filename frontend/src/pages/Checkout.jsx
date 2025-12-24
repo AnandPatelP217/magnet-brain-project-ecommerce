@@ -1,27 +1,25 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import { useCart } from '../contexts'
+import { useCheckout } from '../hooks'
+import { ErrorMessage } from '../components'
 
-function Checkout({ cart }) {
+function Checkout() {
   const [email, setEmail] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [clientSecret, setClientSecret] = useState('')
-  const [publishableKey, setPublishableKey] = useState('')
   const [stripe, setStripe] = useState(null)
   const [elements, setElements] = useState(null)
   const navigate = useNavigate()
-
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  
+  const { cart, getCartTotal, clearCart } = useCart()
+  const { loading, error, clientSecret, publishableKey, initiateCheckout, processPayment } = useCheckout()
+  
+  const total = getCartTotal()
 
   // Load Stripe.js
   useEffect(() => {
     const script = document.createElement('script')
     script.src = 'https://js.stripe.com/v3/'
     script.async = true
-    script.onload = () => {
-      // Stripe will be initialized when we get the publishable key
-    }
     document.body.appendChild(script)
 
     return () => {
@@ -37,13 +35,8 @@ function Checkout({ cart }) {
       const stripeInstance = window.Stripe(publishableKey)
       setStripe(stripeInstance)
 
-      const appearance = {
-        theme: 'stripe',
-      }
-      const elementsInstance = stripeInstance.elements({ 
-        clientSecret, 
-        appearance 
-      })
+      const appearance = { theme: 'stripe' }
+      const elementsInstance = stripeInstance.elements({ clientSecret, appearance })
       setElements(elementsInstance)
 
       const paymentElement = elementsInstance.create('payment')
@@ -54,75 +47,33 @@ function Checkout({ cart }) {
   const handleInitiateCheckout = async (e) => {
     e.preventDefault()
     
-    if (!email) {
-      setError('Email is required')
-      return
-    }
-
-    setLoading(true)
-    setError('')
+    if (!email) return
 
     try {
-      const response = await axios.post('http://localhost:5000/api/orders/create', {
-        customerEmail: email,
-        items: cart.map(item => ({
-          productId: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity
-        }))
-      })
-
-      if (response.data.data) {
-        setClientSecret(response.data.data.clientSecret)
-        setPublishableKey(response.data.data.publishableKey)
-      }
-      setLoading(false)
+      const items = cart.map(item => ({
+        productId: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+      }))
+      
+      await initiateCheckout(email, items)
     } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong')
-      setLoading(false)
+      // Error handled by hook
     }
   }
 
   const handlePayment = async (e) => {
     e.preventDefault()
 
-    if (!stripe || !elements) {
-      return
-    }
-
-    setLoading(true)
-    setError('')
+    if (!stripe || !elements) return
 
     try {
-      const { error: submitError } = await elements.submit()
-      if (submitError) {
-        setError(submitError.message)
-        setLoading(false)
-        return
-      }
-
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: window.location.origin + '/success',
-        },
-        redirect: 'if_required'
-      })
-
-      if (error) {
-        setError(error.message)
-        setLoading(false)
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        // Verify payment on backend
-        await axios.post('http://localhost:5000/api/orders/verify', {
-          payment_intent_id: paymentIntent.id
-        })
-        navigate('/success')
-      }
+      await processPayment(stripe, elements)
+      clearCart()
+      navigate('/success')
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Payment failed')
-      setLoading(false)
+      // Error handled by hook
     }
   }
 
@@ -172,14 +123,12 @@ function Checkout({ cart }) {
             />
           </div>
 
-          {error && (
-            <p className="text-red-500 text-sm mb-4">{error}</p>
-          )}
+          {error && <ErrorMessage message={error} />}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:bg-gray-400 mt-4"
           >
             {loading ? 'Processing...' : 'Continue to Payment'}
           </button>
@@ -192,14 +141,12 @@ function Checkout({ cart }) {
           <h2 className="font-semibold mb-4">Payment Details</h2>
           <div id="payment-element" className="mb-4"></div>
 
-          {error && (
-            <p className="text-red-500 text-sm mb-4">{error}</p>
-          )}
+          {error && <ErrorMessage message={error} />}
 
           <button
             type="submit"
             disabled={loading || !stripe || !elements}
-            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:bg-gray-400 mt-4"
           >
             {loading ? 'Processing...' : `Pay $${total.toFixed(2)}`}
           </button>
