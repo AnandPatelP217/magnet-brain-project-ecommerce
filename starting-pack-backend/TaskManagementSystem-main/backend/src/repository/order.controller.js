@@ -16,17 +16,17 @@ export class OrderRepository {
   }
 
   /**
-   * Find order by Razorpay Order ID
+   * Find order by Stripe Payment Intent ID
    */
-  async findByRazorpayOrderId(razorpayOrderId) {
-    return await Order.findOne({ razorpayOrderId });
+  async findByStripePaymentIntentId(stripePaymentIntentId) {
+    return await Order.findOne({ stripePaymentIntentId });
   }
 
   /**
-   * Find order by Razorpay Payment ID
+   * Find order by Stripe Payment Method ID
    */
-  async findByRazorpayPaymentId(razorpayPaymentId) {
-    return await Order.findOne({ razorpayPaymentId });
+  async findByStripePaymentMethodId(stripePaymentMethodId) {
+    return await Order.findOne({ stripePaymentMethodId });
   }
 
   /**
@@ -64,11 +64,11 @@ export class OrderRepository {
   }
 
   /**
-   * Update order by Razorpay Order ID
+   * Update order by Stripe Payment Intent ID
    */
-  async updateByRazorpayOrderId(razorpayOrderId, updateData) {
+  async updateByStripePaymentIntentId(stripePaymentIntentId, updateData) {
     return await Order.findOneAndUpdate(
-      { razorpayOrderId },
+      { stripePaymentIntentId },
       updateData,
       {
         new: true,
@@ -78,11 +78,11 @@ export class OrderRepository {
   }
 
   /**
-   * Update order by Razorpay Payment ID
+   * Update order by Stripe Payment Method ID
    */
-  async updateByRazorpayPaymentId(razorpayPaymentId, updateData) {
+  async updateByStripePaymentMethodId(stripePaymentMethodId, updateData) {
     return await Order.findOneAndUpdate(
-      { razorpayPaymentId },
+      { stripePaymentMethodId },
       updateData,
       {
         new: true,
@@ -99,10 +99,10 @@ export class OrderRepository {
   }
 
   /**
-   * Check if order exists by Razorpay order ID
+   * Check if order exists by Stripe payment intent ID
    */
-  async existsByRazorpayOrderId(razorpayOrderId) {
-    const order = await Order.findOne({ razorpayOrderId });
+  async existsByStripePaymentIntentId(stripePaymentIntentId) {
+    const order = await Order.findOne({ stripePaymentIntentId });
     return !!order;
   }
 }

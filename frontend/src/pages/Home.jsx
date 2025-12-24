@@ -3,7 +3,7 @@ import { products } from '../data/products'
 function Home({ addToCart }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Products</h1>
+      <h1 className="text-2xl font-bold mb-6">Produc</h1>
       
       <div className="grid grid-cols-3 gap-4">
         {products.map(product => (

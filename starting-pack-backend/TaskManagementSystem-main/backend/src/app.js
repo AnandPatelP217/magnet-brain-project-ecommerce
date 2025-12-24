@@ -10,18 +10,14 @@ import cors from "cors";
 
 const app = express();
 
-// Stripe webhook route MUST be before express.json() to receive raw body
-app.post('/api/orders/webhook', express.raw({ type: 'application/json' }), (req, res, next) => {
-  req.app.locals.webhookRawBody = req.body;
-  next();
-});
+
 
 app.use(express.json());
 app.use(cookieParser());
 
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGINS,
+    origin: process.env.ALLOWED_ORIGINS || "http://localhost:5173",
     credentials: true,
   })
 );

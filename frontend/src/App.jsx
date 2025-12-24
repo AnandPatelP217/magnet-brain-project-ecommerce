@@ -44,10 +44,10 @@ function App() {
       <header className="bg-white shadow p-4">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <Link to="/" className="text-2xl font-bold text-blue-600">
-            MyShop
+            E-commerce-Magnet-brains
           </Link>
           <Link to="/cart" className="relative">
-            <span className="text-2xl">🛒</span>
+            <span className="text-2xl">Card</span>
             {cartCount > 0 && (
               <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {cartCount}

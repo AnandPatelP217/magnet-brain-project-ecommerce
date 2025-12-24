@@ -1,11 +1,11 @@
 import orderService from '../services/order.service.js';
-import razorpayService from '../services/stripe.service.js';
+import stripeService from '../services/stripe.service.js';
 import { sendResponse } from '../utils/sendResponse.js';
 import { AppError } from '../utils/AppError.js';
 import { STATUS } from '../constants/statusCodes.js';
 
 /**
- * Create Razorpay order
+ * Create Stripe payment intent
  */
 export const createOrder = async (req, res, next) => {
     try {
@@ -39,8 +39,8 @@ export const createOrder = async (req, res, next) => {
         // Calculate total
         const totalAmount = orderService.calculateTotal(items);
 
-        // Create Razorpay order
-        const razorpayOrder = await razorpayService.createOrder({
+        // Create Stripe payment intent
+        const paymentIntent = await stripeService.createPaymentIntent({
             amount: totalAmount,
             customerEmail,
             orderId: `order_${Date.now()}`
@@ -52,15 +52,16 @@ export const createOrder = async (req, res, next) => {
             customerEmail,
             totalAmount,
             paymentStatus: 'created',
-            razorpayOrderId: razorpayOrder.orderId,
+            stripePaymentIntentId: paymentIntent.paymentIntentId,
         });
 
         sendResponse(res, STATUS.CREATED, 'Order created successfully', {
             orderId: order._id,
-            razorpayOrderId: razorpayOrder.orderId,
+            clientSecret: paymentIntent.clientSecret,
+            paymentIntentId: paymentIntent.paymentIntentId,
             amount: totalAmount,
-            currency: razorpayOrder.currency,
-            keyId: process.env.RAZORPAY_KEY_ID
+            currency: paymentIntent.currency,
+            publishableKey: process.env.STRIPE_PUBLISHABLE_KEY
         });
     } catch (error) {
         next(error);
@@ -72,28 +73,22 @@ export const createOrder = async (req, res, next) => {
  */
 export const verifyPayment = async (req, res, next) => {
     try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+        const { payment_intent_id } = req.body;
 
-        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-            throw new AppError('Missing payment verification details', STATUS.BAD_REQUEST);
+        if (!payment_intent_id) {
+            throw new AppError('Missing payment intent ID', STATUS.BAD_REQUEST);
         }
 
-        // Verify signature
-        const isValid = razorpayService.verifyPaymentSignature({
-            orderId: razorpay_order_id,
-            paymentId: razorpay_payment_id,
-            signature: razorpay_signature
-        });
+        // Retrieve payment intent from Stripe
+        const paymentIntent = await stripeService.getPaymentIntent(payment_intent_id);
 
-        if (!isValid) {
-            throw new AppError('Invalid payment signature', STATUS.BAD_REQUEST);
+        if (paymentIntent.status !== 'succeeded') {
+            throw new AppError('Payment not successful', STATUS.BAD_REQUEST);
         }
 
         // Update order with payment details
-        const order = await orderService.updateOrderByRazorpayOrderId(razorpay_order_id, {
+        const order = await orderService.updateOrderByStripePaymentIntentId(payment_intent_id, {
             paymentStatus: 'captured',
-            razorpayPaymentId: razorpay_payment_id,
-            razorpaySignature: razorpay_signature,
             orderStatus: 'processing'
         });
 

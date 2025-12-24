@@ -37,39 +37,39 @@ class OrderService {
     }
 
     /**
-     * Get order by Razorpay Order ID
+     * Get order by Stripe Payment Intent ID
      */
-    async getOrderByRazorpayOrderId(razorpayOrderId) {
+    async getOrderByStripePaymentIntentId(stripePaymentIntentId) {
         try {
-            const order = await orderRepository.findByRazorpayOrderId(razorpayOrderId);
+            const order = await orderRepository.findByStripePaymentIntentId(stripePaymentIntentId);
             
             if (!order) {
-                throw new AppError('Order not found for this Razorpay order', 404);
+                throw new AppError('Order not found for this Stripe payment intent', 404);
             }
             
             return order;
         } catch (error) {
             if (error instanceof AppError) throw error;
-            console.error('Error fetching order by Razorpay order ID:', error);
+            console.error('Error fetching order by Stripe payment intent ID:', error);
             throw new AppError(`Failed to fetch order: ${error.message}`, 500);
         }
     }
 
     /**
-     * Get order by Razorpay Payment ID
+     * Get order by Stripe Payment Method ID
      */
-    async getOrderByRazorpayPaymentId(razorpayPaymentId) {
+    async getOrderByStripePaymentMethodId(stripePaymentMethodId) {
         try {
-            const order = await orderRepository.findByRazorpayPaymentId(razorpayPaymentId);
+            const order = await orderRepository.findByStripePaymentMethodId(stripePaymentMethodId);
             
             if (!order) {
-                throw new AppError('Order not found for this Razorpay payment', 404);
+                throw new AppError('Order not found for this Stripe payment method', 404);
             }
             
             return order;
         } catch (error) {
             if (error instanceof AppError) throw error;
-            console.error('Error fetching order by Razorpay payment ID:', error);
+            console.error('Error fetching order by Stripe payment method ID:', error);
             throw new AppError(`Failed to fetch order: ${error.message}`, 500);
         }
     }
@@ -111,17 +111,17 @@ class OrderService {
     }
 
     /**
-     * Update order by Razorpay order ID
+     * Update order by Stripe payment intent ID
      */
-    async updateOrderByRazorpayOrderId(razorpayOrderId, updateData) {
+    async updateOrderByStripePaymentIntentId(stripePaymentIntentId, updateData) {
         try {
-            const order = await orderRepository.updateByRazorpayOrderId(
-                razorpayOrderId,
+            const order = await orderRepository.updateByStripePaymentIntentId(
+                stripePaymentIntentId,
                 updateData
             );
             
             if (!order) {
-                throw new AppError('Order not found for this Razorpay order', 404);
+                throw new AppError('Order not found for this Stripe payment intent', 404);
             }
             
             return order;
@@ -133,17 +133,17 @@ class OrderService {
     }
 
     /**
-     * Update order by Razorpay payment ID
+     * Update order by Stripe payment method ID
      */
-    async updateOrderByRazorpayPaymentId(razorpayPaymentId, updateData) {
+    async updateOrderByStripePaymentMethodId(stripePaymentMethodId, updateData) {
         try {
-            const order = await orderRepository.updateByRazorpayPaymentId(
-                razorpayPaymentId,
+            const order = await orderRepository.updateByStripePaymentMethodId(
+                stripePaymentMethodId,
                 updateData
             );
             
             if (!order) {
-                throw new AppError('Order not found for this Razorpay payment', 404);
+                throw new AppError('Order not found for this Stripe payment method', 404);
             }
             
             return order;

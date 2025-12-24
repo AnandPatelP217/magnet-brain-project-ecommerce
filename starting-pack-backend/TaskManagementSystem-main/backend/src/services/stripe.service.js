@@ -1,105 +1,82 @@
-import Razorpay from 'razorpay';
-import crypto from 'crypto';
+import Stripe from 'stripe';
 import { AppError } from '../utils/AppError.js';
 
-let razorpay = null;
+let stripe = null;
 
-const getRazorpayInstance = () => {
-  if (!razorpay) {
-    razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET
-    });
+const getStripeInstance = () => {
+  if (!stripe) {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
   }
-  return razorpay;
+  return stripe;
 };
 
-class RazorpayService {
+class StripeService {
     /**
-     * Create a Razorpay Order
+     * Create a Stripe Payment Intent
      */
-    async createOrder({ amount, currency = 'INR', customerEmail, orderId }) {
+    async createPaymentIntent({ amount, currency = 'usd', customerEmail, orderId }) {
         try {
-            const options = {
-                amount: Math.round(amount * 100), // Convert to paise
-                currency,
-                receipt: orderId || `order_${Date.now()}`,
-                notes: {
-                    customerEmail,
-                    orderId
+            const paymentIntent = await getStripeInstance().paymentIntents.create({
+                amount: Math.round(amount * 100), // Convert to cents
+                currency: currency.toLowerCase(),
+                receipt_email: customerEmail,
+                metadata: {
+                    orderId: orderId || `order_${Date.now()}`,
+                    customerEmail
+                },
+                automatic_payment_methods: {
+                    enabled: true,
                 }
-            };
-
-            const order = await getRazorpayInstance().orders.create(options);
+            });
 
             return {
-                orderId: order.id,
-                amount: order.amount,
-                currency: order.currency,
-                status: order.status
+                paymentIntentId: paymentIntent.id,
+                clientSecret: paymentIntent.client_secret,
+                amount: paymentIntent.amount,
+                currency: paymentIntent.currency,
+                status: paymentIntent.status
             };
         } catch (error) {
-            console.error('Razorpay order creation error:', error);
-            throw new AppError(`Failed to create Razorpay order: ${error.message}`, 500);
+            console.error('Stripe payment intent creation error:', error);
+            throw new AppError(`Failed to create Stripe payment intent: ${error.message}`, 500);
         }
     }
 
     /**
-     * Verify Payment Signature
+     * Retrieve Payment Intent
      */
-    verifyPaymentSignature({ orderId, paymentId, signature }) {
+    async getPaymentIntent(paymentIntentId) {
         try {
-            const secret = process.env.RAZORPAY_KEY_SECRET;
-            
-            if (!secret) {
-                throw new Error('Razorpay key secret not configured');
-            }
-
-            const body = orderId + '|' + paymentId;
-            const expectedSignature = crypto
-                .createHmac('sha256', secret)
-                .update(body.toString())
-                .digest('hex');
-
-            return expectedSignature === signature;
+            const paymentIntent = await getStripeInstance().paymentIntents.retrieve(paymentIntentId);
+            return paymentIntent;
         } catch (error) {
-            console.error('Signature verification error:', error);
-            throw new AppError(`Signature verification failed: ${error.message}`, 400);
+            console.error('Error fetching payment intent:', error);
+            throw new AppError(`Failed to fetch payment intent: ${error.message}`, 500);
         }
     }
 
     /**
-     * Fetch Payment Details
+     * Confirm Payment Intent
      */
-    async getPayment(paymentId) {
+    async confirmPaymentIntent(paymentIntentId, paymentMethodId) {
         try {
-            const payment = await getRazorpayInstance().payments.fetch(paymentId);
-            return payment;
+            const paymentIntent = await getStripeInstance().paymentIntents.confirm(paymentIntentId, {
+                payment_method: paymentMethodId
+            });
+            return paymentIntent;
         } catch (error) {
-            console.error('Error fetching payment:', error);
-            throw new AppError(`Failed to fetch payment: ${error.message}`, 500);
-        }
-    }
-
-    /**
-     * Fetch Order Details
-     */
-    async getOrder(orderId) {
-        try {
-            const order = await getRazorpayInstance().orders.fetch(orderId);
-            return order;
-        } catch (error) {
-            console.error('Error fetching order:', error);
-            throw new AppError(`Failed to fetch order: ${error.message}`, 500);
+            console.error('Error confirming payment intent:', error);
+            throw new AppError(`Failed to confirm payment intent: ${error.message}`, 500);
         }
     }
 
     /**
      * Create Refund
      */
-    async createRefund(paymentId, amount) {
+    async createRefund(paymentIntentId, amount) {
         try {
-            const refund = await getRazorpayInstance().payments.refund(paymentId, {
+            const refund = await getStripeInstance().refunds.create({
+                payment_intent: paymentIntentId,
                 amount: amount ? Math.round(amount * 100) : undefined,
             });
             return refund;
@@ -108,6 +85,23 @@ class RazorpayService {
             throw new AppError(`Failed to create refund: ${error.message}`, 500);
         }
     }
+
+    /**
+     * Verify webhook signature
+     */
+    verifyWebhookSignature(payload, signature, secret) {
+        try {
+            const event = getStripeInstance().webhooks.constructEvent(
+                payload,
+                signature,
+                secret
+            );
+            return event;
+        } catch (error) {
+            console.error('Webhook signature verification error:', error);
+            throw new AppError(`Webhook signature verification failed: ${error.message}`, 400);
+        }
+    }
 }
 
-export default new RazorpayService();
+export default new StripeService();

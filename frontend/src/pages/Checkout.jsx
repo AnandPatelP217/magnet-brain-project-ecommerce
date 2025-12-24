@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 
@@ -6,11 +6,52 @@ function Checkout({ cart }) {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [clientSecret, setClientSecret] = useState('')
+  const [publishableKey, setPublishableKey] = useState('')
+  const [stripe, setStripe] = useState(null)
+  const [elements, setElements] = useState(null)
   const navigate = useNavigate()
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
-  const handleCheckout = async (e) => {
+  // Load Stripe.js
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.src = 'https://js.stripe.com/v3/'
+    script.async = true
+    script.onload = () => {
+      // Stripe will be initialized when we get the publishable key
+    }
+    document.body.appendChild(script)
+
+    return () => {
+      if (script.parentNode) {
+        document.body.removeChild(script)
+      }
+    }
+  }, [])
+
+  // Initialize Stripe elements when we have client secret
+  useEffect(() => {
+    if (clientSecret && publishableKey && window.Stripe) {
+      const stripeInstance = window.Stripe(publishableKey)
+      setStripe(stripeInstance)
+
+      const appearance = {
+        theme: 'stripe',
+      }
+      const elementsInstance = stripeInstance.elements({ 
+        clientSecret, 
+        appearance 
+      })
+      setElements(elementsInstance)
+
+      const paymentElement = elementsInstance.create('payment')
+      paymentElement.mount('#payment-element')
+    }
+  }, [clientSecret, publishableKey])
+
+  const handleInitiateCheckout = async (e) => {
     e.preventDefault()
     
     if (!email) {
@@ -22,8 +63,8 @@ function Checkout({ cart }) {
     setError('')
 
     try {
-      const response = await axios.post('http://localhost:5000/api/orders/create-checkout-session', {
-        email,
+      const response = await axios.post('http://localhost:5000/api/orders/create', {
+        customerEmail: email,
         items: cart.map(item => ({
           productId: item.id,
           name: item.name,
@@ -32,10 +73,55 @@ function Checkout({ cart }) {
         }))
       })
 
-      // Redirect to Stripe checkout
-      window.location.href = response.data.url
+      if (response.data.data) {
+        setClientSecret(response.data.data.clientSecret)
+        setPublishableKey(response.data.data.publishableKey)
+      }
+      setLoading(false)
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong')
+      setLoading(false)
+    }
+  }
+
+  const handlePayment = async (e) => {
+    e.preventDefault()
+
+    if (!stripe || !elements) {
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const { error: submitError } = await elements.submit()
+      if (submitError) {
+        setError(submitError.message)
+        setLoading(false)
+        return
+      }
+
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: window.location.origin + '/success',
+        },
+        redirect: 'if_required'
+      })
+
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        // Verify payment on backend
+        await axios.post('http://localhost:5000/api/orders/verify', {
+          payment_intent_id: paymentIntent.id
+        })
+        navigate('/success')
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Payment failed')
       setLoading(false)
     }
   }
@@ -71,36 +157,54 @@ function Checkout({ cart }) {
         </div>
       </div>
 
-      {/* Checkout Form */}
-      <form onSubmit={handleCheckout} className="bg-white p-4 rounded shadow">
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Email *</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
-            className="w-full border p-2 rounded"
-            required
-          />
-        </div>
+      {/* Email Form */}
+      {!clientSecret && (
+        <form onSubmit={handleInitiateCheckout} className="bg-white p-4 rounded shadow">
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Email *</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              className="w-full border p-2 rounded"
+              required
+            />
+          </div>
 
-        <p className="text-sm text-gray-500 mb-4">
-          Payment details will be collected on the next page via Stripe.
-        </p>
+          {error && (
+            <p className="text-red-500 text-sm mb-4">{error}</p>
+          )}
 
-        {error && (
-          <p className="text-red-500 text-sm mb-4">{error}</p>
-        )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+          >
+            {loading ? 'Processing...' : 'Continue to Payment'}
+          </button>
+        </form>
+      )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
-        >
-          {loading ? 'Processing...' : 'Proceed to Payment'}
-        </button>
-      </form>
+      {/* Stripe Payment Form */}
+      {clientSecret && (
+        <form onSubmit={handlePayment} className="bg-white p-4 rounded shadow">
+          <h2 className="font-semibold mb-4">Payment Details</h2>
+          <div id="payment-element" className="mb-4"></div>
+
+          {error && (
+            <p className="text-red-500 text-sm mb-4">{error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !stripe || !elements}
+            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+          >
+            {loading ? 'Processing...' : `Pay $${total.toFixed(2)}`}
+          </button>
+        </form>
+      )}
     </div>
   )
 }

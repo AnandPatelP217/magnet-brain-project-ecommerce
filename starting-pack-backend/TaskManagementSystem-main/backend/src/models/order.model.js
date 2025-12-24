@@ -24,26 +24,22 @@ const orderSchema = new mongoose.Schema({
         enum: ['pending', 'created', 'authorized', 'captured', 'failed', 'cancelled'],
         default: 'pending'
     },
-    razorpayOrderId: {
+    stripePaymentIntentId: {
         type: String,
         required: true,
         unique: true
     },
-    razorpayPaymentId: {
-        type: String,
-        sparse: true
-    },
-    razorpaySignature: {
+    stripePaymentMethodId: {
         type: String,
         sparse: true
     },
     paymentMethod: {
         type: String,
-        default: 'razorpay'
+        default: 'stripe'
     },
     currency: {
         type: String,
-        default: 'INR'
+        default: 'USD'
     },
     shippingAddress: {
         line1: String,
@@ -76,8 +72,8 @@ const orderSchema = new mongoose.Schema({
 
 // Index for faster queries
 orderSchema.index({ customerEmail: 1 });
-orderSchema.index({ razorpayOrderId: 1 });
-orderSchema.index({ razorpayPaymentId: 1 });
+orderSchema.index({ stripePaymentIntentId: 1 });
+orderSchema.index({ stripePaymentMethodId: 1 });
 orderSchema.index({ paymentStatus: 1 });
 orderSchema.index({ createdAt: -1 });
 
